@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Semakan Kerja IPD Miri</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f8fafc; color: #1e293b; -webkit-text-size-adjust: 100%; }
+        select.status-select { appearance: none; background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e"); background-repeat: no-repeat; background-position: right .65rem center; background-size: 1rem; padding-right: 2rem; }
+        .photo-slot { min-width: 88px; }
+        .photo-preview { width: 72px; height: 54px; object-fit: cover; }
+        @media print {
+            @page { size: A4 landscape; margin: 10mm; }
+            body { background: #fff !important; color: #000 !important; }
+            body > * { display: none !important; }
+            #fullModal { display: block !important; position: static !important; inset: auto !important; padding: 0 !important; background: #fff !important; overflow: visible !important; }
+            #fullModal .modal-shell { display: block !important; width: 100% !important; max-width: none !important; max-height: none !important; overflow: visible !important; border: 0 !important; box-shadow: none !important; }
+            #fullModal .no-print, .no-print { display: none !important; }
+            #fullModal .report-scroll { display: block !important; overflow: visible !important; padding: 0 !important; }
+            #fullTableContainer { display: block !important; }
+            .report-flat { break-before: auto; page-break-inside: auto; margin: 0 0 8mm; }
+            .report-room { break-inside: avoid; page-break-inside: avoid; border: 1px solid #555 !important; margin: 0 0 5mm !important; }
+            .report-category { break-inside: avoid; page-break-inside: avoid; }
+            .report-photo { width: 62mm !important; height: 43mm !important; object-fit: contain !important; background: #f1f5f9 !important; }
+            table { border-collapse: collapse !important; width: 100% !important; }
+            th, td { color: #000 !important; border-color: #333 !important; }
+            img { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-12">
+    <header class="bg-slate-950 text-white shadow-xl border-b-4 border-yellow-400 no-print">
+        <div class="max-w-7xl mx-auto px-4 py-5 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-4">
+                <div class="bg-red-600 p-3 rounded-xl border-2 border-yellow-400"><i class="fa-solid fa-building-shield text-3xl"></i></div>
+                <div><span class="bg-red-600 text-white font-extrabold text-xs px-3 py-1 rounded-full uppercase border border-yellow-400">IPD Miri, Sarawak</span><h1 class="text-xl sm:text-2xl font-extrabold mt-2">Sistem Semakan Kerja Pembaikan Kuarters &amp; Flat</h1></div>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap justify-center">
+                <span class="bg-emerald-700 text-white font-bold text-xs px-3 py-2 rounded-lg"><i class="fa-solid fa-cloud-arrow-up text-yellow-300"></i> Auto-Save</span>
+                <button onclick="manualSaveData()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-3 rounded-lg"><i class="fa-solid fa-floppy-disk mr-2"></i>Simpan Data</button>
+                <button onclick="openFullModal()" class="bg-blue-700 hover:bg-blue-800 text-white font-bold px-4 py-3 rounded-lg"><i class="fa-solid fa-table mr-2"></i>Penyata / Cetak</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-7">
+        <section class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-7 no-print">
+            <div class="bg-white p-5 shadow-sm border-t-4 border-red-600"><p class="text-xs font-bold text-slate-500 uppercase">Jumlah Unit</p><p id="totalUnits" class="text-3xl font-extrabold mt-1">0</p></div>
+            <div class="bg-white p-5 shadow-sm border-t-4 border-yellow-500"><p class="text-xs font-bold text-slate-500 uppercase">Unit Siap 100%</p><p id="totalCompleted" class="text-3xl font-extrabold text-blue-700 mt-1">0</p></div>
+            <div class="bg-white p-5 shadow-sm border-t-4 border-slate-900 flex justify-between items-center">
+                <div>
+                    <p class="text-xs font-bold text-slate-500 uppercase">Purata Kerja Siap</p>
+                    <p id="overallPercentage" class="text-3xl font-extrabold text-red-600 mt-1">0.00%</p>
+                </div>
+                <!-- Custom Pie Percent Icon with Number inside -->
+                <div class="w-16 h-16 relative flex items-center justify-center">
+                    <svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                        <path class="text-slate-900" stroke-width="4" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                        <path id="pieProgressPath" class="text-rose-500 transition-all duration-500" stroke-dasharray="0, 100" stroke-width="4" stroke-linecap="round" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center text-[10px] font-extrabold text-slate-900" id="piePercentText">0%</div>
+                </div>
+            </div>
+        </section>
+        <div id="flatsContainer" class="space-y-4 no-print"></div>
+    </main>
+
+    <div id="fullModal" class="fixed inset-0 z-50 hidden bg-slate-900/80 flex items-center justify-center p-2 sm:p-4">
+        <div class="modal-shell bg-white rounded-xl shadow-2xl w-full max-w-7xl max-h-[95vh] flex flex-col overflow-hidden">
+            <div class="no-print bg-slate-950 text-white px-5 py-4 flex justify-between items-center gap-3 border-b-4 border-yellow-400">
+                <div><h2 class="font-extrabold text-lg">Penyata Rekod Kerja dan Foto</h2><p class="text-xs text-yellow-300">Imej sebelum, semasa dan selepas mengikut unit dan jenis kerja</p></div>
+                <div class="flex gap-2"><button onclick="printFullTable()" class="bg-emerald-600 text-white font-bold px-4 py-2 rounded-lg"><i class="fa-solid fa-print mr-2"></i>Cetak</button><button onclick="closeFullModal()" aria-label="Tutup" class="bg-red-600 text-white w-10 rounded-lg"><i class="fa-solid fa-xmark"></i></button></div>
+            </div>
+            <div class="no-print bg-slate-100 px-5 py-3 flex flex-wrap gap-3 items-center border-b">
+                <input id="tableSearchInput" oninput="renderFullTableRows()" type="search" placeholder="Cari nama flat atau no. bilik..." class="border border-slate-300 bg-white px-3 py-2 rounded-lg text-sm flex-1 min-w-48">
+                <select id="tableFlatFilter" onchange="renderFullTableRows()" class="border border-slate-300 bg-white px-3 py-2 rounded-lg text-sm"><option value="">Semua Flat</option></select>
+                <span id="modalTotalUnits" class="font-bold text-xs text-slate-600"></span>
+            </div>
+            <div class="report-scroll overflow-y-auto flex-1 p-4 sm:p-6">
+                <div id="printHeading" class="mb-5 border-2 border-slate-900 p-4 text-xs sm:text-sm font-bold space-y-1">
+                    <p>TAJUK KERJA: KERJA-KERJA PEMBAIKAN AM DI KUARTERS DAN FLAT IBU PEJABAT POLIS DAERAH MIRI, SARAWAK</p>
+                    <p>TARIKH KELUAR LPO: 5.8.2026</p><p>TARIKH SIAP KERJA DALAM LPO: 5.11.2026</p><p>TARIKH MASUK KERJA: 18.8.2026</p>
+                </div>
+                <div id="fullTableContainer"></div>
+            </div>
+            <div class="no-print bg-slate-100 px-5 py-3 border-t flex justify-between items-center"><span class="text-xs text-slate-600">Status disimpan pada peranti dan disegerakkan ke Firebase jika tersedia. Foto disimpan dalam storan browser peranti ini.</span><button onclick="closeFullModal()" class="bg-slate-900 text-white font-bold px-5 py-2 rounded-lg">Tutup</button></div>
+        </div>
+    </div>
+
+    <div id="saveToast" class="fixed bottom-5 right-5 z-50 hidden bg-slate-950 border border-emerald-500 text-white px-5 py-3 rounded-lg shadow-xl"><i class="fa-solid fa-circle-check text-emerald-400 mr-2"></i>Rekod berjaya disimpan.</div>
+    <footer class="text-center py-7 text-xs font-bold text-slate-500 mt-10 border-t border-slate-200 no-print">&copy; 2026 Sistem Pembaikan Kuarters &amp; Flat IPD Miri</footer>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, onSnapshot, serverTimestamp, updateDoc, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'ipd-miri-work-system-v2.5';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "AIzaSyDummyKeyForPreviewModeOnly12345", authDomain: "ipd-miri.firebaseapp.com", projectId: "ipd-miri" };
+        const flatOrder = ["FLAT IKAN PITANG", "FLAT IKAN KERAPU", "FLAT IKAN SEMBILANG", "FLAT IKAN BAONG", "FLAT IKAN BELIDA", "FLAT IKAN EMPURAU", "FLAT IKAN KULONG", "FLAT IKAN SEMAH", "FLAT IKAN SENANGIN", "FLAT IKAN TENGGIRI", "FLAT IKAN BUING", "FLAT IKAN KALOI", "FLAT IKAN TENGGADAK", "FLAT IKAN PARI", "FLAT IKAN YU", "FLAT BUNGA RAYA", "FLAT BUNGA SIANTAN"];
+        const categories = [
+            { key: "civil", label: "Kerja Awam & Struktur" },
+            { key: "plumbing", label: "Kerja Paip & Sanitari" },
+            { key: "wood", label: "Kerja Kayu" },
+            { key: "balcony", label: "Pembaikan Balkoni" }
+        ];
+        const phases = [{ key: "before", label: "Imej Sebelum" }, { key: "during", label: "Imej Semasa" }, { key: "after", label: "Imej Selepas" }];
+        const initialData = [
+            { flatName: "FLAT IKAN PITANG", rooms: [
+                { id: "pitang_d3_2", roomNo: "D3-2", civil: "siap", plumbing: "siap", wood: "siap", balcony: "siap" },
+                { id: "pitang_dg_2", roomNo: "DG-2", civil: "in_process", plumbing: "belum", wood: "belum", balcony: "belum" },
+                { id: "pitang_d2_2", roomNo: "D2-2", civil: "in_process", plumbing: "siap", wood: "siap", balcony: "siap" },
+                { id: "pitang_d1_2", roomNo: "D1-2", civil: "siap", plumbing: "siap", wood: "in_process", balcony: "in_process" }
+            ] },
+            { flatName: "FLAT IKAN KERAPU", rooms: [
+                { id: "kerapu_a2_1", roomNo: "A2-1", civil: "belum", plumbing: "belum", wood: "belum", balcony: "siap" },
+                { id: "kerapu_a2_2", roomNo: "A2-2", civil: "siap", plumbing: "siap", wood: "in_process", balcony: "in_process" },
+                { id: "kerapu_a1_1", roomNo: "A1-1", civil: "belum", plumbing: "belum", wood: "belum", balcony: "siap" }
+            ] },
+            { flatName: "FLAT IKAN SEMBILANG", rooms: [
+                { id: "sembilang_c1_1", roomNo: "C1-1", civil: "in_process", plumbing: "in_process", wood: "in_process", balcony: "siap" },
+                { id: "sembilang_c2_2", roomNo: "C2-2", civil: "siap", plumbing: "in_process", wood: "siap", balcony: "siap" },
+                { id: "sembilang_c1_2", roomNo: "C1-2", civil: "siap", plumbing: "in_process", wood: "in_process", balcony: "siap" },
+                { id: "sembilang_cg_1_2", roomNo: "CG-1-2", civil: "belum", plumbing: "belum", wood: "belum", balcony: "belum" },
+                { id: "sembilang_c3_2", roomNo: "C3-2", civil: "in_process", plumbing: "in_process", wood: "siap", balcony: "siap" }
+            ] },
+            { flatName: "FLAT IKAN BAONG", rooms: [
+                { id: "baong_b1_1", roomNo: "B1-1", civil: "belum", plumbing: "belum", wood: "belum", balcony: "siap" },
+                { id: "baong_bg_1", roomNo: "BG-1", civil: "belum", plumbing: "belum", wood: "belum", balcony: "belum" }
+            ] },
+            { flatName: "FLAT IKAN BELIDA", rooms: [
+                { id: "belida_e1_3", roomNo: "E1-3", civil: "belum", plumbing: "belum", wood: "belum", balcony: "belum" },
+                { id: "belida_e2_4", roomNo: "E2-4", civil: "belum", plumbing: "belum", wood: "belum", balcony: "siap" },
+                { id: "belida_e3_3", roomNo: "E3-3", civil: "belum", plumbing: "belum", wood: "belum", balcony: "belum" },
+                { id: "belida_e3_2", roomNo: "E3-2", civil: "belum", plumbing: "belum", wood: "belum", balcony: "siap" },
+                { id: "belida_e2_3", roomNo: "E2-3", civil: "belum", plumbing: "belum", wood: "belum", balcony: "belum" },
+                { id: "belida_e1_1", roomNo: "E1-1", civil: "belum", plumbing: "belum", wood: "belum", balcony: "belum" },
+                { id: "belida_e2_1", roomNo: "E2-1", civil: "belum", plumbing: "belum", wood: "belum", balcony: "belum" }
+            ] },
+            { flatName: "FLAT IKAN EMPURAU", rooms: [
+                { id: "empurau_d3_3", roomNo: "D3-3", civil: "belum", plumbing: "belum", wood: "belum", balcony: "belum" },
+                { id: "empurau_d1_1", roomNo: "D1-1", civil: "belum", plumbing: "belum", wood: "belum", balcony: "belum" },
+                { id: "empurau_d4_1", roomNo: "D4-1", civil: "belum", plumbing: "belum", wood: "belum", balcony: "belum" },
+                { id: "empurau_d4_4", roomNo: "D4-4", civil: "belum", plumbing: "belum", wood: "belum", balcony: "belum" }
+            ] },
+            { flatName: "FLAT IKAN KULONG", rooms: [
+                { id: "kulong_c2_3", roomNo: "C2-3", civil: "belum", plumbing: "belum", wood: "belum", balcony: "belum" },
+                { id: "kulong_c1_4", roomNo: "C1-4", civil: "belum", plumbing: "belum", wood: "belum", balcony: "belum" },
+                { id: "kulong_c3_1", roomNo: "C3-1", civil: "belum", plumbing: "belum", wood: "belum", balcony: "belum" },
